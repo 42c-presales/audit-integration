@@ -1,0 +1,7 @@
+audit:
+  branches:
+    main: 
+      discovery:
+        search:
+          - OASFiles/Discovery/*.json
+          - OASFiles/*.json

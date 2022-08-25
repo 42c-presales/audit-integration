@@ -1,0 +1,2795 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Trip Parser",
+    "version": "2.1.1",
+    "x-tags": [
+      "#ama-for-dev"
+    ],
+    "x-status": "validated",
+    "x-release-note": {
+      "2.1": [
+        "Addition of the result end-point"
+      ],
+      "2.0": [
+        "Migration to Amadeus standard V1.2"
+      ]
+    },
+    "description": "\n# Introduction\n\nThe Trip Parser API offers the possibility to structure in a standard way the content of your booking confirmation.\n\nThis API comes with 3 different endpoints:\n\n- **A POST to create a new Trip Parser Job**: This is where you will send the content of your booking email (encoded in base 64). This will trigger the parsing job. This endpoint will return 2 major information:\n    \n    - An Id (10 characters): the unique identifier of your parsing request\n\n    - A status: as it can take a few minutes to parse some (heavy) emails, we have decided to implement an asynchronous parsing. The status will let you know if the parsing is IN_PROGRESS or COMPLETE. This leads us to the 2end endpoint.\n    \n- **A GET to retrieve the status of a job** by its Id. You can use this endpoint to check the status of your job.\n\n- **A GET to retrieve the result of your parsing** by its id. This endpoint will return the result of the email parsing in JSON.\n       \n# Limitations \n- **Only one booking confirmation** can be attached in the payload of the POST request. \n- Parser supports 3 format of confirmations: **.html, .eml, .pdf**\n- Booking confirmation need to be converted into **Base 64 encoding** before being send in the POST request.\n- POST request **cannot exceed 4Mb**.\n- Parser supports 4 type of reservations : **Flight, Car, Hotel, Train**\n- Parser is an **Asynchronous process**.\n- Result of the parsing is **available for 7 days**\n\n# Authorization\n\nBefore using the API you will need to get an access token. Please read our **[Authorization Guide](https://developers.amadeus.com/self-service/apis-docs/guides/authorization)** for more information on how to get your token.\n\n# Billing\n\nOnly the POST transaction are billed, the retrieves are free of charge.\n\n# Supported Operations\n\n**Resource**: trip-parser-job\n\n**HTTP Method**: GET, POST",
+    "x-customized-for": "AMA4DEV"
+  },
+  "host": "test.api.amadeus.com",
+  "basePath": "/v2",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/vnd.amadeus+json"
+  ],
+  "produces": [
+    "application/vnd.amadeus+json"
+  ],
+  "parameters": {
+    "jobId": {
+      "name": "jobId",
+      "required": true,
+      "in": "path",
+      "type": "string"
+    }
+  },
+  "paths": {
+    "/travel/trip-parser-jobs": {
+      "post": {
+        "tags": [
+          "trip-parser-jobs"
+        ],
+        "operationId": "createTripParserJob",
+        "summary": "Creates a new Trip Parser Job.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "title": "Body_TripParserJob",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/TripParserJob_in"
+                }
+              },
+              "example": {
+                "data": {
+                  "type": "trip-parser-job",
+                  "content": "OL0YrSmE3a2dOMHJCazVVeHpMM2VaRitkd1IzZTVXUzlFTDg4N0VKdVR1SUN5OWZ1TStBQzlvQi9jOStOVw0KKzFTeVpNbVNKVXVXTEZteVpNbVNKVXVXTEZteVpQMS85UmROU3RsN3BLSG14QUFBQUFCSlJVNUVya0pnZ2c9PQ0KDQotLS0tLS09X05leHRQYXJ0XzAwMF8wMDAwXzAxRDI1NTMzLjQ1N0M5MDEwLS0NCg=="
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "schema": {
+              "title": "Success_TripParserJob",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Issue"
+                  }
+                },
+                "data": {
+                  "$ref": "#/definitions/TripParserJob_out"
+                }
+              },
+              "example": {
+                "data": {
+                  "type": "trip-parser-job",
+                  "id": "JKKSJNMSKHJ",
+                  "status": "started",
+                  "self": {
+                    "href": "https://test.api.amadeus.com/v2/travel/trip-parser-jobs/JKKSJNMSKHJ",
+                    "method": [
+                      "GET"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "\n** Error Codes **\n\ncode    | title                                 \n------- | -------------------------------------                        \n477     | INVALID FORMAT\n572     | INVALID OPTION \t                       \n4926    | INVALID DATA RECEIVED \t        \n32171   | MANDATORY DATA MISSING \t        \n",
+            "schema": {
+              "$ref": "#/definitions/Error_400"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/Error_401"
+            }
+          },
+          "default": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/Error_500"
+            }
+          }
+        },
+        "description": "The operation use to send the request for the parsing with the booking details and input parameters.\n\nThe customer has to specify the following information when creating a POST request :\n* Customer need to encode the booking content by Base 64 encoding method to add it as a payload in the POST request \n* Customer will send the Post request with the below mention details : \n    * API key - Header Parameter \n    * Encoded Booking confirmation in payload\n* Parser web service component will perform the initial validation (example: check the file format).\n* Parser web service will send the error message to customer in the case of validation failure or if there is any issue. \n* Parser web service will send the unique id to the customer with the HTTP code (example: 202 -Accepted) and parsing status. \n\n## Request/Response Details\n\n### Request Example\n\n``` https\nPOST https://test.api.amadeus.com/v2/travel/trip-parser-jobs\n```\n\n#### Query Example: Request for parsing with booking confirmation details.\n\nCustomer will convert the booking confirmation details (eml/PDF/HTML formats) into base64 string format and send in the POST request with the input parameters. \n\n``` json\n{\n    \"data\": {\n        \"type\": \"trip-parser-job\",\n        \"content\": \"base64string\"\n    }\n}\n```\n### Response details\n\nWhen the query is correct and successfully received by parser and process started , system will send the status in the response or error message.\n\n#### Successful Reply Example: \n\n``` json\n{\n    \"data\": {\n        \"type\": \"trip-parser-job\",\n        \"id\": \"JKKSJNMSKHJ\",\n        \"status\": \"STARTED\",\n        \"self\": {\n            \"href\": \"https://test.api.amadeus.com/v2/travel/trip-parser-jobs/JKKSJNMSKHJ\",\n            \"methods\": [ \"GET\" ]\n        }\n    }\n}\n``` "
+      }
+    },
+    "/travel/trip-parser-jobs/{jobId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/jobId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "trip-parser-jobs"
+        ],
+        "operationId": "getTripParserJob",
+        "summary": "Retrieves a Parser Job by its Id.",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "schema": {
+              "title": "Success_TripParserJob",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Issue"
+                  }
+                },
+                "data": {
+                  "$ref": "#/definitions/TripParserJob_out"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "** Error Codes **\n\ncode    | title                                 \n------- | ------------------------------------- \n 572    | INVALID OPTION\t        \n",
+            "schema": {
+              "$ref": "#/definitions/Error_400"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/Error_401"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/Error_404"
+            }
+          },
+          "default": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/Error_500"
+            }
+          }
+        },
+        "description": "The operation is used to get the parsing status and the link to the result in case of successful parsing. \n\nThe customer has to specify the following information when creating a GET request :\n- Customer will send the GET query with the unique Id, which is received by customer in the POST query . \n- After unique Id validation, it will send the parsing status (In Progress/Failed)\n- Trip Parser will send the error message to API Customer in the case of unique  Id validation failure. \n- In the case of Parsing success then it will send the  URI to get the complete trip details \n- Trip Parser will send the error message to the customer in the case of trip creation failure or any other internal error . \n\n#### Response when Parsing is In progress Example:\n\n``` json\n{\n    \"data\": {\n        \"type\": \"trip-parser-job\",\n        \"id\": \"JKKSJNMSKHJ\",\n        \"status\": \"IN_PROGRESS\",\n        \"self\": {\n            \"href\": \"https://test.api.amadeus.com/v2/travel/trip-parser-jobs/JKKSJNMSKHJ\",\n            \"methods\": [ \"GET\" ]\n        }\n    }\n}\n```\n\n#### Successful Reply Example: \n\n``` json\n{\n    \"data\": {\n        \"type\": \"trip-parser-job\",\n        \"id\": \"JKKSJNMSKHJ\",\n        \"status\": \"COMPLETED\",\n        \"result\": {\n            \"href\": \"https://result-url\",\n            \"methods\": [ \"GET\" ]\n        },\n        \"self\": {\n            \"href\": \"https://test.api.amadeus.com/v2/travel/trip-parser-jobs/JKKSJNMSKHJ\",\n            \"methods\": [ \"GET\" ]\n        }\n    }\n}\n```\n\n#### Reply when parsing is failed: \n\n``` json\n{\n    \"data\": {\n        \"type\": \"trip-parser-job\",\n        \"id\": \"JKKSJNMSKHJ\",\n        \"status\": \"FAILED\",\n        \"detail\": \"Unable to parse\",\n        \"self\": {\n            \"href\": \"https://test.api.amadeus.com/v2/travel/trip-parser-jobs/JKKSJNMSKHJ\",\n            \"methods\": [ \"GET\" ]\n        }\n    }\n}\n```\n\n#### Successful Reply with warnings returned:\n\n``` json\n{\n    \"data\": {\n        \"type\": \"trip-parser-job\",\n        \"id\": \"JKKSJNMSKHJ\",\n        \"status\": \"COMPLETED\",\n        \"result\": {\n            \"href\": \"https://result-url\",\n            \"methods\": [ \"GET\" ]\n        },\n        \"self\": {\n            \"href\": \"https://test.api.amadeus.com/v2/travel/trip-parser-jobs/JKKSJNMSKHJ\",\n            \"methods\": [ \"GET\" ]\n        }\n    },\n    \"warnings\": [\n        {\n        \"code\": 367,\n        \"title\": \"PARTIALLY PROCESSED\"\n        }\n    ]\n}\n```\n\n** warnings codes**\n        \ncode    | title                                 \n------- | ------------------------------------- \n 367    | PARTIALLY PROCESSED\t\n"
+      }
+    },
+    "/travel/trip-parser-jobs/{jobId}/result": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/jobId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "trip-parser-jobs"
+        ],
+        "operationId": "getResult",
+        "summary": "Retrieves the result of the trip parser job.",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "schema": {
+              "title": "Success_Result",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Issue"
+                  }
+                },
+                "data": {
+                  "$ref": "#/definitions/AggregatedTrip"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "** Error Codes **\n\ncode    | title                                 \n------- | ------------------------------------- \n 572    | INVALID OPTION\n  \t        \n",
+            "schema": {
+              "$ref": "#/definitions/Error_400"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/Error_401"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/Error_404"
+            }
+          },
+          "default": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/Error_500"
+            }
+          }
+        },
+        "description": "- The operation is used to get the complete result of parsing as a aggregated view of Trip.\n- The customer has to provide the job id in the GET request.\n- System will verify the request and send the complete parsed trip with all the available segments information.\n- Parsing system will send the error message in the case of any issue or error. \n\n## Request/Response Details\n\n### Request Example       \n\n``` http\nGET https://test.api.amadeus.com/v2/travel/trip-parser-jobs/Mk8RWGGCDagNHOdjP9EZrJ9l/result\n```\n\n### Response Example\n\n``` json\n{\n    \"data\": {\n        \"type\": \"aggregated-trip\",\n        \"id\": \"Mk8RWGGCDagNHOdjP9EZrJ9l\",\n        \"self\": {\n            \"href\": \"https://test.api.amadeus.com/v2/travel/trip-parser-jobs/Mk8RWGGCDagNHOdjP9EZrJ9l/result\"\n        },\n        \"reference\": \"2ZYVAL\",\n        \"creation\": {\n            \"dateTime\": \"2015-12-15\",\n            \"office\": {\n                \"id\": \"NCE1A0950\"\n            }\n        },\n        \"start\": {\n            \"dateTime\": \"2016-01-01\",\n            \"locationName\": \"Paris\",\n            \"locationCode\": \"PAR\",\n            \"address\": {\n                \"countryCode\": \"FR\",\n                \"countryName\": \"France\"\n            }\n        },\n        \"end\": {\n            \"dateTime\": \"2016-01-01\",\n            \"locationName\": \"London\",\n            \"locationCode\": \"LHR\",\n            \"address\": {\n                \"countryCode\": \"EN\",\n                \"countryName\": \"England\"\n            }\n        },\n        \"stakeholders\": [\n            {\n                \"PTC\": \"ADT\",\n                \"dateOfBirth\": \"1968-10-24\",\n                \"roles\": [\n                    \"TRAVELLER\"\n                ],\n                \"names\": [\n                    {\n                        \"lastName\": \"SMITH\",\n                        \"firstName\": \"JOHN\"\n                    }\n                ]\n            }\n        ],\n        \"products\": [\n            {\n                \"air\": {\n                    \"bkgClass\": \"B\",\n                    \"status\": \"HK\",\n                    \"NIP\": 1,\n                    \"serviceProvider\": {\n                        \"code\": \"AF\",\n                        \"name\": \"Air France\",\n                        \"baggagePolicyLink\": \"http://bags.amadeus.com/Display.aspx?a=AF\"\n                    },\n                    \"identifier\": \"AF1234\",\n                    \"start\": {\n                        \"dateTime\": \"2016-01-01T12:00\",\n                        \"terminal\": 2,\n                        \"cityCode\": \"PAR\",\n                        \"countryCode\": \"FR\",\n                        \"locationCode\": \"CDG\"\n                    },\n                    \"end\": {\n                        \"dateTime\": \"2016-01-01T14:00\",\n                        \"cityCode\": \"LON\",\n                        \"countryCode\": \"GB\",\n                        \"locationCode\": \"LHR\"\n                    },\n                    \"duration\": \"2.0\",\n                    \"baggages\": [\n                        {\n                        \"quantity\": 1,\n                        \"unit\": \"PIECES\"\n                        }\n                    ],\n                    \"cabin\": {\n                        \"bkgClass\": \"F\"\n                    }\n                }\n            }\n        ]\n    }\n}\n```"
+      }
+    }
+  },
+  "definitions": {
+    "TripParserJob_in": {
+      "required": [
+        "type",
+        "content"
+      ],
+      "properties": {
+        "type": {
+          "description": "the resource name",
+          "type": "string"
+        },
+        "id": {
+          "description": "item identifier",
+          "type": "string",
+          "readOnly": true
+        },
+        "content": {
+          "type": "string",
+          "description": "content of the travel email in base64 format. To be present only as input in case of post operation."
+        },
+        "self": {
+          "$ref": "#/definitions/Links"
+        }
+      }
+    },
+    "TripParserJob_out": {
+      "required": [
+        "type",
+        "status"
+      ],
+      "properties": {
+        "type": {
+          "description": "the resource name",
+          "type": "string"
+        },
+        "id": {
+          "description": "item identifier",
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "STARTED",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "FAILED"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/definitions/Relationship"
+        },
+        "self": {
+          "$ref": "#/definitions/Links"
+        }
+      }
+    },
+    "Error_400": {
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Issue"
+          }
+        }
+      },
+      "required": [
+        "errors"
+      ],
+      "example": {
+        "errors": [
+          {
+            "status": 400,
+            "code": 477,
+            "title": "INVALID FORMAT",
+            "detail": "invalid query parameter format",
+            "source": {
+              "parameter": "airport",
+              "example": "CDG"
+            }
+          }
+        ]
+      }
+    },
+    "Error_401": {
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Issue"
+          }
+        }
+      },
+      "required": [
+        "errors"
+      ],
+      "example": {
+        "errors": [
+          {
+            "status": 401,
+            "code": 20,
+            "title": "RESTRICTED",
+            "detail": "Query unauthorized"
+          }
+        ]
+      }
+    },
+    "Error_404": {
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Issue"
+          }
+        }
+      },
+      "required": [
+        "errors"
+      ],
+      "example": {
+        "errors": [
+          {
+            "status": 404,
+            "code": 1797,
+            "title": "NOT FOUND",
+            "detail": "no response found for this query parameter",
+            "source": {
+              "parameter": "airport"
+            }
+          }
+        ]
+      }
+    },
+    "Error_500": {
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Issue"
+          }
+        }
+      },
+      "required": [
+        "errors"
+      ],
+      "example": {
+        "errors": [
+          {
+            "status": 500,
+            "code": 141,
+            "title": "SYSTEM ERROR HAS OCCURRED"
+          }
+        ]
+      }
+    },
+    "Issue": {
+      "properties": {
+        "status": {
+          "description": "the HTTP status code applicable to this error",
+          "type": "integer"
+        },
+        "code": {
+          "description": "an application-specific error code",
+          "type": "integer",
+          "format": "int64"
+        },
+        "title": {
+          "description": "a short summary of the error",
+          "type": "string"
+        },
+        "detail": {
+          "description": "explanation of the error",
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "title": "Issue_Source",
+          "description": "an object containing references to the source of the error",
+          "maxProperties": 1,
+          "properties": {
+            "pointer": {
+              "description": "a JSON Pointer [RFC6901] to the associated entity in the request document",
+              "type": "string"
+            },
+            "parameter": {
+              "description": "a string indicating which URI query parameter caused the issue",
+              "type": "string"
+            },
+            "example": {
+              "description": "a string indicating an example of the right value",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "Links": {
+      "required": [
+        "href"
+      ],
+      "properties": {
+        "href": {
+          "type": "string",
+          "format": "uri"
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "PUT",
+              "DELETE",
+              "POST",
+              "PATCH"
+            ]
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "example": {
+        "href": "string"
+      }
+    },
+    "Relationship": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string",
+          "format": "uri"
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "PUT",
+              "DELETE",
+              "POST",
+              "PATCH"
+            ]
+          }
+        },
+        "ref": {
+          "type": "string"
+        }
+      }
+    },
+    "AggregatedTrip": {
+      "required": [
+        "type"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/Trip"
+        },
+        {
+          "properties": {
+            "type": {
+              "description": "the resource name",
+              "type": "string"
+            },
+            "id": {
+              "description": "item identifier",
+              "type": "string",
+              "readOnly": true
+            },
+            "self": {
+              "$ref": "#/definitions/Links"
+            },
+            "stakeholders": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Stakeholder"
+              }
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Product"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Trip": {
+      "properties": {
+        "type": {
+          "description": "the resource name (`trip`)",
+          "type": "string"
+        },
+        "id": {
+          "description": "item identifier",
+          "type": "string",
+          "readOnly": true
+        },
+        "self": {
+          "$ref": "#/definitions/Links"
+        },
+        "reference": {
+          "description": "Reference of the Trip",
+          "type": "string",
+          "pattern": "[a-f0-9]{6,10}",
+          "readOnly": true
+        },
+        "externalID": {
+          "description": "Identifier of the trip in an external system (e.g. GLC)",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "readOnly": true
+        },
+        "creation": {
+          "description": "Creation date and office Id of the Trip",
+          "$ref": "#/definitions/Creation",
+          "readOnly": true
+        },
+        "modification": {
+          "description": "Modification date and office Id of the Trip",
+          "$ref": "#/definitions/Creation",
+          "readOnly": true
+        },
+        "ownerOffice": {
+          "description": "Owner office of the Trip",
+          "$ref": "#/definitions/Creation",
+          "readOnly": true
+        },
+        "title": {
+          "description": "Trip label or name",
+          "type": "string",
+          "maxLength": 128
+        },
+        "description": {
+          "description": "Trip description",
+          "type": "string",
+          "maxLength": 140
+        },
+        "purpose": {
+          "description": "Business or Leisure",
+          "type": "string",
+          "maxLength": 15
+        },
+        "privacy": {
+          "description": "Public or private",
+          "type": "string",
+          "maxLength": 15
+        },
+        "start": {
+          "description": "Trip Departure information",
+          "$ref": "#/definitions/TripPoint",
+          "readOnly": true
+        },
+        "itinerary": {
+          "description": "locations where a significant stop is performed.",
+          "type": "array",
+          "maxItems": 99,
+          "items": {
+            "type": "object",
+            "title": "Trip_Step",
+            "properties": {
+              "dateTime": {
+                "description": "Date of the stop with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                "type": "string",
+                "format": "date-time"
+              },
+              "locationName": {
+                "description": "Name of the stop city",
+                "type": "string",
+                "maxLength": 64
+              },
+              "duration": {
+                "description": "duration of the stop",
+                "type": "string"
+              },
+              "locationCode": {
+                "description": "Stop Location [IATA code](https://en.wikipedia.org/wiki/International_Air_Transport_Association_airport_code)",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 3
+              },
+              "address": {
+                "$ref": "#/definitions/Address"
+              }
+            }
+          },
+          "readOnly": true
+        },
+        "to": {
+          "description": "Trip destination information",
+          "$ref": "#/definitions/TripPoint",
+          "readOnly": true
+        },
+        "end": {
+          "description": "Trip Arrival information",
+          "$ref": "#/definitions/TripPoint",
+          "readOnly": true
+        },
+        "travelAgency": {
+          "$ref": "#/definitions/TravelAgency",
+          "readOnly": true
+        }
+      }
+    },
+    "Creation": {
+      "properties": {
+        "dateTime": {
+          "description": "Date of the trip point optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+          "type": "string",
+          "format": "date-time"
+        },
+        "office": {
+          "$ref": "#/definitions/Office"
+        }
+      }
+    },
+    "Office": {
+      "properties": {
+        "id": {
+          "description": "the office id",
+          "type": "string"
+        },
+        "cityCode": {
+          "type": "string"
+        },
+        "countryCode": {
+          "type": "string"
+        },
+        "regionCode": {
+          "type": "string"
+        }
+      }
+    },
+    "Stakeholder": {
+      "properties": {
+        "PTC": {
+          "description": "The 3 characters long Passenger Type Code of the traveller (e.g ADT, CHD...)",
+          "type": "string",
+          "maxLength": 3
+        },
+        "staffType": {
+          "description": "The type of staff of the stakeholder (e.g BKB or SBY)",
+          "type": "string"
+        },
+        "dateOfBirth": {
+          "description": "The date of birth of the stakeholder",
+          "type": "string",
+          "format": "date"
+        },
+        "age": {
+          "description": "The age of the stakeholder, made of a number from one to three characters long followed by the letter Y (e.g 5Y, 011Y, 59Y, ...)",
+          "type": "string",
+          "format": "integer"
+        },
+        "specialSeat": {
+          "description": "CBBG (Cabin Baggage) or EXST (Extra Seat)",
+          "type": "string"
+        },
+        "identificationCode": {
+          "description": "ID or CR field, must start with ID or CR followed by alphanumeric characters (e.g ID10152307, CR1234AA,...)",
+          "type": "string"
+        },
+        "roles": {
+          "description": "The list of roles of the Stakeholder among Traveller, Buyer and Payer. Currently only Traveller role is supported. If no input is provided, the system shall default to Traveller role.\n",
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "TRAVELLER"
+            ]
+          }
+        },
+        "nationality": {
+          "description": "The nationality of the Stakeholder",
+          "type": "string"
+        },
+        "names": {
+          "description": "Name of the Stakeholder. The full name of the stakeholder, including PTC, staffType dateOfBirthf and specialSeat must remain below 59 characters\n",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/definitions/Name"
+          }
+        }
+      }
+    },
+    "Name": {
+      "type": "object",
+      "description": "description of the name of a physical person",
+      "properties": {
+        "type": {
+          "description": "The type of the Name",
+          "type": "string"
+        },
+        "isRef": {
+          "description": "Reference Name",
+          "type": "boolean"
+        },
+        "firstName": {
+          "description": "First name.",
+          "type": "string"
+        },
+        "lastName": {
+          "description": "Last name.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Contains all the suffixes and prefixes that can be appended to a name - Mr, Miss, Pr. - E.g. \" Mr\".",
+          "type": "string"
+        },
+        "maidenName": {
+          "description": "The name given at birth time and that may have changed after a marriage.",
+          "type": "string"
+        },
+        "middleName": {
+          "description": "Middle name(s), for example \"Lee\" in \"John Lee Smith\".",
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Name prefix (e.g. Doctor)"
+        },
+        "suffix": {
+          "description": "Name suffix (e.g. Junior, III, etc).",
+          "type": "string"
+        },
+        "transliterationMethod": {
+          "type": "string",
+          "description": "The method (if applicated) that was used to transform the name from universal character (e.g. korean characters) to latin characters/phonetic transcription/..."
+        }
+      }
+    },
+    "Product": {
+      "properties": {
+        "air": {
+          "$ref": "#/definitions/Product_Air"
+        },
+        "hotel": {
+          "$ref": "#/definitions/Product_Hotel"
+        },
+        "moveMiscellaneous": {
+          "$ref": "#/definitions/Product_MoveMisc"
+        },
+        "car": {
+          "$ref": "#/definitions/Product_Car"
+        },
+        "train": {
+          "$ref": "#/definitions/Product_Train"
+        }
+      }
+    },
+    "Product_common": {
+      "properties": {
+        "bkgChannel": {
+          "$ref": "#/definitions/BookingChannelType"
+        },
+        "originSystem": {
+          "description": "It is calculated automatically. If filled, the input will be discarded for the calculated value.",
+          "$ref": "#/definitions/OriginSystemType",
+          "readOnly": true
+        },
+        "externalSystem": {
+          "$ref": "#/definitions/ExternalSystemType"
+        },
+        "creation": {
+          "$ref": "#/definitions/Product_Creation"
+        },
+        "modification": {
+          "$ref": "#/definitions/Product_Modification"
+        },
+        "confirmation": {
+          "$ref": "#/definitions/Product_Confirmation"
+        },
+        "descriptions": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/definitions/Description"
+          }
+        }
+      }
+    },
+    "Product_Creation": {
+      "properties": {
+        "dateTime": {
+          "description": "creation date time with optional time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Product_Modification": {
+      "properties": {
+        "dateTime": {
+          "description": "modification information with optional time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Product_Confirmation": {
+      "properties": {
+        "deadline": {
+          "description": "confirmation information with optional time offset",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Product_Air": {
+      "description": "air Reservation",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Product_common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "description": {
+              "description": "Description or Free text",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 199
+            },
+            "bkgClass": {
+              "description": "Booking Class",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2
+            },
+            "status": {
+              "description": "Status code (example HK, HX, HN, HL, TT ...)",
+              "type": "string"
+            },
+            "NIP": {
+              "description": "Number in party",
+              "type": "integer",
+              "pattern": "[0-9]{1-99}"
+            },
+            "agreement": {
+              "description": "Airline alliance, group information",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "ruleNumber": {
+              "description": "Rule number required by some providers to complete the booking",
+              "type": "string"
+            },
+            "confirmNbr": {
+              "description": "Confirmation number",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "cancelNbr": {
+              "description": "Cancellation number",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "overrideStatus": {
+              "description": "Enable to override status code (ex. for Offers)",
+              "readOnly": true,
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2
+            },
+            "MBOProductCode": {
+              "description": "Freetext on twenty characters, sub-product of the MBO (Ex. For EC AIR > international, domestic, european)",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "serviceProvider": {
+              "title": "Product_Air_ServiceProvider",
+              "description": "marketing service provider information",
+              "properties": {
+                "ref": {
+                  "description": "The provider's profile reference",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20
+                },
+                "code": {
+                  "description": "Marketing Airline code",
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 3
+                },
+                "name": {
+                  "description": "Provider name",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 35
+                },
+                "baggagePolicyLink": {
+                  "description": "Link to the provider baggage policy",
+                  "type": "string",
+                  "readOnly": true
+                },
+                "isTLA": {
+                  "type": "boolean",
+                  "description": "To-Do"
+                }
+              }
+            },
+            "identifier": {
+              "title": "Air_Identifier",
+              "description": "identifier of the trip",
+              "properties": {
+                "number": {
+                  "description": "The flight number",
+                  "type": "string",
+                  "pattern": "[0-9]{1-4}"
+                },
+                "suffix": {
+                  "description": "Suffix of the flight number",
+                  "type": "string",
+                  "maxLength": 1
+                }
+              }
+            },
+            "partnerInfo": {
+              "title": "Product_Air_PartnerInfo",
+              "description": "operating information",
+              "properties": {
+                "serviceProvider": {
+                  "$ref": "#/definitions/Product_Air_ServiceProvider"
+                },
+                "identifier": {
+                  "$ref": "#/definitions/Product_Air_Identifier"
+                }
+              }
+            },
+            "start": {
+              "title": "Product_Air_Start",
+              "description": "start point details",
+              "required": [
+                "locationCode",
+                "dateTime"
+              ],
+              "properties": {
+                "dateTime": {
+                  "description": "Departure date with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "terminal": {
+                  "description": "Departure terminal",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 25
+                },
+                "locationName": {
+                  "description": "Name of the departure city",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "airportName": {
+                  "description": "Name of the departure Airport",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "cityCode": {
+                  "description": "Code of the departure city",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "countryCode": {
+                  "description": "Code of the departure country",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "locationCode": {
+                  "description": "[IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx) of the departure location",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{3}"
+                },
+                "address": {
+                  "$ref": "#/definitions/Address"
+                },
+                "media": {
+                  "$ref": "#/definitions/Relationship"
+                },
+                "regionCode": {
+                  "type": "string"
+                }
+              }
+            },
+            "end": {
+              "title": "Product_Air_End",
+              "description": "end point details",
+              "required": [
+                "locationCode"
+              ],
+              "properties": {
+                "dateTime": {
+                  "description": "End date with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "terminal": {
+                  "description": "Arrival terminal",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 25
+                },
+                "locationName": {
+                  "description": "Name of the arrival city",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "airportName": {
+                  "description": "Name of the arrival Airport",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "visaAlert": {
+                  "description": "Indicator to define if a visa is needed for the arrival country (True) or not (False)",
+                  "type": "boolean"
+                },
+                "cityCode": {
+                  "description": "Code of the arrival city",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "countryCode": {
+                  "description": "Code of the arrival country",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "locationCode": {
+                  "description": "[IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx) of the arrival location",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{3}"
+                },
+                "address": {
+                  "$ref": "#/definitions/Address"
+                },
+                "media": {
+                  "$ref": "#/definitions/Relationship"
+                }
+              }
+            },
+            "seats": {
+              "type": "array",
+              "items": {
+                "title": "Product_Air_Seat",
+                "description": "Seat details",
+                "required": [
+                  "number",
+                  "start",
+                  "end"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "Status code (example HK, HX, HN, NO ...)"
+                  },
+                  "serviceProvider": {
+                    "type": "object",
+                    "title": "Air_Seat_ServiceProvider",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "maxLength": 3
+                      }
+                    }
+                  },
+                  "start": {
+                    "type": "object",
+                    "title": "Air_Seat_Start",
+                    "properties": {
+                      "locationCode": {
+                        "description": "[IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx) of the departure location",
+                        "type": "string",
+                        "pattern": "[a-zA-Z0-9]{3}"
+                      }
+                    }
+                  },
+                  "end": {
+                    "type": "object",
+                    "title": "Air_Seat_End",
+                    "properties": {
+                      "locationCode": {
+                        "description": "[IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx) of the arrival location",
+                        "type": "string",
+                        "pattern": "[a-zA-Z0-9]{3}"
+                      }
+                    }
+                  },
+                  "number": {
+                    "type": "string",
+                    "description": "Seat number"
+                  },
+                  "stakeholder": {
+                    "$ref": "#/definitions/Relationship"
+                  }
+                },
+                "x-masks": {
+                  "trip-parser_V2": {
+                    "excluded": [
+                      "stakeholder"
+                    ]
+                  }
+                }
+              }
+            },
+            "vehicle": {
+              "type": "object",
+              "title": "Product_Air_Vehicle",
+              "description": "Vehicle details",
+              "properties": {
+                "code": {
+                  "description": "The equipment code",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 3
+                },
+                "description": {
+                  "description": "The equipment description",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 70
+                }
+              }
+            },
+            "meal": {
+              "type": "object",
+              "title": "Product_Air_Meal",
+              "description": "Meal information",
+              "properties": {
+                "code": {
+                  "description": "Code of the meal served on board",
+                  "type": "string"
+                },
+                "description": {
+                  "description": "Description of the meal served on board",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 199
+                }
+              }
+            },
+            "duration": {
+              "description": "Duration of the trip",
+              "type": "string",
+              "format": "double",
+              "readOnly": true
+            },
+            "mileage": {
+              "type": "object",
+              "title": "Product_Air_Mileage",
+              "description": "Distance of the trip",
+              "properties": {
+                "distance": {
+                  "description": "Distance of the trip",
+                  "type": "integer",
+                  "pattern": "[0-9]{1-8}"
+                },
+                "unit": {
+                  "description": "Unit of distance, in kilometers (KM) or miles (MI)",
+                  "type": "string",
+                  "enum": [
+                    "KM",
+                    "MI"
+                  ]
+                }
+              }
+            },
+            "baggages": {
+              "description": "Baggages information",
+              "type": "array",
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "title": "Product_Air_Baggages",
+                "properties": {
+                  "quantity": {
+                    "description": "Baggage allowance",
+                    "type": "integer",
+                    "pattern": "[0-9]{1-99}"
+                  },
+                  "unit": {
+                    "description": "Pieces or kilograms",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 99
+                  }
+                }
+              }
+            },
+            "checkInEndTime": {
+              "description": "Check-in information",
+              "type": "string",
+              "format": "date-time"
+            },
+            "ticket": {
+              "type": "object",
+              "title": "Product_Air_Ticket",
+              "description": "Ticket information",
+              "properties": {
+                "number": {
+                  "description": "Ticket number",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 35
+                },
+                "issuanceDate": {
+                  "description": "Ticket issuance date",
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            },
+            "cabinClass": {
+              "description": "Category code of the cabin. F = First, C = Club (Business), W = Premium Economy, Y = Economy.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 7
+            },
+            "routeId": {
+              "description": "Route Id",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "Product_Air_ServiceProvider": {
+      "title": "Product_Air_ServiceProvider",
+      "description": "marketing service provider information",
+      "properties": {
+        "ref": {
+          "description": "The provider's profile reference",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "code": {
+          "description": "Marketing Airline code",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 3
+        },
+        "name": {
+          "description": "Provider name",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 35
+        },
+        "baggagePolicyLink": {
+          "description": "Link to the provider baggage policy",
+          "type": "string",
+          "readOnly": true
+        },
+        "isTLA": {
+          "type": "boolean",
+          "description": "To-Do"
+        }
+      }
+    },
+    "Product_Air_Identifier": {
+      "title": "Air_Identifier",
+      "description": "identifier of the trip",
+      "properties": {
+        "number": {
+          "description": "The flight number",
+          "type": "string",
+          "pattern": "[0-9]{1-4}"
+        },
+        "suffix": {
+          "description": "Suffix of the flight number",
+          "type": "string",
+          "maxLength": 1
+        }
+      }
+    },
+    "Product_Hotel": {
+      "description": "hotel reservation",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Product_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "checkInEndTime",
+            "checkOutEndTime",
+            "start"
+          ],
+          "properties": {
+            "description": {
+              "description": "Description or Free text",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 199
+            },
+            "bkgClass": {
+              "description": "Room categories are U-Unknown, B-Budget , T-Standard, S-Superior, X-Deluxe, E-Executive, J-Junior Suite, D-Suite standard, I-Suite Deluxe. Temporary solution waiting to define Room as real elements linked to the ETR Hotel and Pax.\n",
+              "type": "string"
+            },
+            "accomodationType": {
+              "description": "Room type (U-Unknown, S-Single, D-Double, R-Triple, Y-Family Room).",
+              "type": "string"
+            },
+            "bedType": {
+              "description": "Bed type.",
+              "type": "string"
+            },
+            "bedNumber": {
+              "description": "Number of beds.",
+              "type": "integer"
+            },
+            "amenities": {
+              "description": "List amenities available in the property.",
+              "type": "string"
+            },
+            "status": {
+              "description": "Status code (example HK, HX, HN, HL, TT ...)",
+              "type": "string"
+            },
+            "NIP": {
+              "description": "Number in party",
+              "type": "integer"
+            },
+            "additionalServices": {
+              "description": "This attribute indicates the additional services that have been requested by the Travel Agent. Additional services are services booked on top of the room (generally meal -breakfast, fullboard- or extra bed-crib, ...).\n",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 70
+            },
+            "cancelPolicies": {
+              "description": "Cancellation policy.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "otherRules": {
+              "description": "Other rules.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "confirmNbr": {
+              "description": "Confirmation number",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "cancelNbr": {
+              "description": "Cancellation number",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "overrideStatus": {
+              "description": "Enable to override status code (ex. for Offers)",
+              "type": "string",
+              "readOnly": true,
+              "minLength": 1,
+              "maxLength": 2
+            },
+            "MBOProductCode": {
+              "description": "Freetext on twenty characters, sub-product of the MBO (Ex. For EC AIR > international, domestic, european)",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "serviceProvider": {
+              "title": "Product_Hotel_ServiceProvider",
+              "description": "service provider information (Hotel Name, Property Code and Reference)",
+              "properties": {
+                "ref": {
+                  "description": "The provider's profile reference",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 6
+                },
+                "name": {
+                  "description": "Provider name",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 70
+                },
+                "code": {
+                  "description": "Provider code.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 35
+                },
+                "externalRef": {
+                  "description": "External profile reference for imported profiles.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 10
+                },
+                "source": {
+                  "description": "Type of provider (GDS, CRS, Multisource).",
+                  "type": "string",
+                  "enum": [
+                    "GDS",
+                    "CRS",
+                    "MULTISOURCE"
+                  ]
+                }
+              }
+            },
+            "chain": {
+              "title": "Product_Hotel_Chain",
+              "description": "hotel Chain information",
+              "properties": {
+                "ref": {
+                  "description": "Hotel Chain's profile reference",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 6
+                },
+                "name": {
+                  "description": "Hotel Chain name",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 70
+                },
+                "code": {
+                  "description": "Hotel Chain code.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 35
+                },
+                "externalRef": {
+                  "description": "External profile reference for imported profiles.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 10
+                }
+              }
+            },
+            "start": {
+              "title": "Product_Hotel_Start",
+              "properties": {
+                "dateTime": {
+                  "description": "check-in date (service date) in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00 - Only date is stored for Hotel in this attribute",
+                  "type": "string",
+                  "format": "date"
+                },
+                "locationCode": {
+                  "description": "Location (city) code",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{3}"
+                },
+                "address": {
+                  "$ref": "#/definitions/Address"
+                },
+                "contact": {
+                  "title": "Product_Hotel_Contact",
+                  "properties": {
+                    "phone": {
+                      "description": "pick-up location phone information",
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 20
+                    }
+                  }
+                },
+                "media": {
+                  "$ref": "#/definitions/Relationship"
+                }
+              }
+            },
+            "end": {
+              "title": "Product_Hotel_End",
+              "required": [
+                "dateTime"
+              ],
+              "properties": {
+                "dateTime": {
+                  "description": "check-out date (service date) in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00 - Only date is stored for Hotel in this attribute",
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            },
+            "checkInEndTime": {
+              "description": "Check-in time (indicates the expected time limit from when the guests can arrive at the property on check-in day) - \nOnly time is stored for Hotel in this attribute.\nTime respects ISO 8601 standard.  e.g. 13:22:00+01:00  \n",
+              "type": "string",
+              "format": "date-time"
+            },
+            "checkOutEndTime": {
+              "description": "Check-out time (indicates the time limit when the guests should leave the property on check-out day) - Only time is stored for Hotel in this attribute.\nTime respects ISO 8601 standard.  e.g. 13:22:00+01:00 \n",
+              "type": "string",
+              "format": "date-time"
+            },
+            "customers": {
+              "title": "Product_Hotel_Customers",
+              "description": "description of the guests (number of adults, number of children by age)",
+              "properties": {
+                "adults": {
+                  "description": "Number of adults.",
+                  "type": "integer",
+                  "pattern": "[0-9]{1-2}"
+                },
+                "children": {
+                  "description": "Number of children (with the age in attribute).",
+                  "type": "array",
+                  "maxItems": 9,
+                  "items": {
+                    "type": "object",
+                    "title": "Product_Hotel_Customers_Children",
+                    "properties": {
+                      "number": {
+                        "description": "Number of children",
+                        "type": "integer",
+                        "pattern": "[0-9]{1}"
+                      },
+                      "age": {
+                        "description": "Age of children",
+                        "type": "integer",
+                        "pattern": "[0-9]{1-2}"
+                      },
+                      "ageCode": {
+                        "description": "Age code (specific to hotel property)",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "mealPlan": {
+              "description": "Dining option\n",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 99
+            },
+            "guarantee": {
+              "title": "Product_Hotel_Guarantee",
+              "description": "guarantee information",
+              "properties": {
+                "paymentForm": {
+                  "description": "Form of Payment to guarantee the booking. Authorized forms of payment for Guarantee are 1-Credit Card, 10-Travel Agent identification, ID-Customer ID, 6-Check, 4-MCO, 12-Company Name.\n",
+                  "type": "string",
+                  "enum": [
+                    1,
+                    10,
+                    "ID",
+                    6,
+                    4,
+                    12
+                  ]
+                },
+                "paymentDetails": {
+                  "description": "Payment details",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 31
+                }
+              }
+            },
+            "deposit": {
+              "title": "Product_Hotel_Desposit",
+              "description": "deposit information",
+              "properties": {
+                "currencyCode": {
+                  "description": "The code specifying a monetary unit. Use ISO 4217, three alpha code.",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{1-3}"
+                },
+                "decimalPlaces": {
+                  "description": "Indicates the number of decimal places for a particular currency. This is equivalent to the ISO 4217 standard \"minor unit\". Typically used when the amount provided includes the minor unit of currency without a decimal point (e.g., USD 8500 needs DecimalPlaces=\"2\" to represent $85).\n",
+                  "type": "integer"
+                },
+                "amount": {
+                  "description": "Defines the amount without decimal separator (i.e. Amount=8500 and DecimalPlace=2 represent 85.00).",
+                  "type": "integer"
+                },
+                "type": {
+                  "description": "Defines the price, e.g. for base fare, total...",
+                  "type": "string"
+                },
+                "IDCode": {
+                  "description": "Used only in case the other codes are not suitable, e.g. T01 when Price is an Airline Fees.",
+                  "type": "string"
+                },
+                "description": {
+                  "description": "Describes more precisely a Price (or Tax), e.g. \"Issuance Fee for Credit Card\" when Price is an Airline Fees.",
+                  "type": "string"
+                },
+                "paymentForm": {
+                  "description": "Form of Payment to guarantee the booking. Authorized forms of payment for Guarantee are 1-Credit Card, 10-Travel Agent identification, ID-Customer ID, 6-Check, 4-MCO, 12-Company Name.\n",
+                  "type": "string",
+                  "enum": [
+                    1,
+                    10,
+                    "ID",
+                    6,
+                    4,
+                    12
+                  ]
+                },
+                "paymentDetails": {
+                  "description": "Payment details",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 31
+                }
+              }
+            },
+            "rate": {
+              "type": "object",
+              "title": "Product_Hotel_Rate",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "inclusions": {
+                  "type": "string"
+                }
+              }
+            },
+            "codes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "title": "Product_Hotel_Code",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Product_Car": {
+      "description": "car Reservation",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Product_common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "description": {
+              "description": "Description or Free text",
+              "type": "string",
+              "maxLength": 99
+            },
+            "status": {
+              "description": "Status code (example HK, HX, HN, HL, TT ...)",
+              "type": "string"
+            },
+            "NIP": {
+              "description": "Number in party",
+              "type": "integer"
+            },
+            "confirmNbr": {
+              "description": "Confirmation number",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-20}"
+            },
+            "cancelNbr": {
+              "description": "Cancellation number",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-20}"
+            },
+            "overrideStatus": {
+              "description": "Enable to override status code (ex. for Offers)",
+              "type": "string",
+              "readOnly": true,
+              "pattern": "[a-zA-Z0-9]{1-2}"
+            },
+            "MBOProductCode": {
+              "description": "Freetext. Sub-product of the MBO (Ex. For EC AIR > international, domestic, european)",
+              "type": "string",
+              "maxLength": 20
+            },
+            "serviceProvider": {
+              "$ref": "#/definitions/Product_Car_ServiceProvider"
+            },
+            "start": {
+              "$ref": "#/definitions/Product_Car_Start"
+            },
+            "end": {
+              "$ref": "#/definitions/Product_Car_End"
+            },
+            "vehicle": {
+              "$ref": "#/definitions/Product_Car_Vehicle"
+            },
+            "conditions": {
+              "$ref": "#/definitions/Product_Car_Conditions"
+            },
+            "delivery": {
+              "$ref": "#/definitions/Product_Car_Delivery"
+            },
+            "collection": {
+              "type": "object",
+              "title": "Product_Car_Collection",
+              "description": "Used to convey collection information.",
+              "properties": {
+                "address": {
+                  "$ref": "#/definitions/Address"
+                },
+                "contact": {
+                  "$ref": "#/definitions/Product_Car_Contact"
+                }
+              }
+            },
+            "payment": {
+              "$ref": "#/definitions/Product_Car_Payment"
+            }
+          }
+        }
+      ]
+    },
+    "Product_Car_Start": {
+      "description": "used to convey the pick-up information (pick-up date, time, location, ...) of the car booking",
+      "properties": {
+        "dateTime": {
+          "description": "Pick-up date with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+          "type": "string",
+          "format": "date-time"
+        },
+        "providerLocationCode": {
+          "description": "Used to specify a non airport Location Code for pick-up. This code should be unique to clearly identify the location.",
+          "type": "string",
+          "pattern": "[a-zA-Z0-9]{1-10}"
+        },
+        "locationCodes": {
+          "description": "Pickup location code, can be an IATA code ([IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx)), a provider location code (type=CPY) or an amadeus location code (type=AMA)",
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/definitions/Product_Car_LocationCode"
+          }
+        },
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "contact": {
+          "$ref": "#/definitions/Product_Car_Contact"
+        },
+        "media": {
+          "$ref": "#/definitions/Relationship"
+        }
+      }
+    },
+    "Product_Car_End": {
+      "description": "used to convey the pick-up information (pick-up date, time, location, ...) of the car booking",
+      "properties": {
+        "dateTime": {
+          "description": "Drop-off date with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+          "type": "string",
+          "format": "date-time"
+        },
+        "providerLocationCode": {
+          "description": "Used to specify a non airport Location Code for pick-up. This code should be unique to clearly identify the location.",
+          "type": "string",
+          "pattern": "[a-zA-Z0-9]{1-10}"
+        },
+        "locationCodes": {
+          "description": "Drop-off location code, can be an IATA code ([IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx)), a provider location code (type=CPY) or an amadeus location code (type=AMA)",
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/definitions/Product_Car_LocationCode"
+          }
+        },
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "contact": {
+          "$ref": "#/definitions/Product_Car_Contact"
+        },
+        "media": {
+          "$ref": "#/definitions/Relationship"
+        }
+      }
+    },
+    "Product_Car_ServiceProvider": {
+      "description": "car provider information",
+      "properties": {
+        "ref": {
+          "description": "The provider's profile reference.",
+          "type": "string",
+          "pattern": "[0-9a-zA-Z]{1-6}"
+        },
+        "name": {
+          "description": "Car rental compay name",
+          "type": "string",
+          "maxLength": 70
+        },
+        "code": {
+          "description": "Car rental company code",
+          "type": "string",
+          "pattern": "[0-9a-zA-Z]{2-3}"
+        }
+      }
+    },
+    "Product_Car_Conditions": {
+      "properties": {
+        "rate": {
+          "type": "object",
+          "title": "Product_Car_Conditions_Rate",
+          "description": "used to convey all information about the rate",
+          "properties": {
+            "category": {
+              "description": "The RateCategory attribute defines a set of valid values for the category of a rate. Typically rates are offered as either Leisure rates or Business (Corporate) rates, with a business rate usually including additional costs such as the cost of insurance, etc.  This set of values defines the rate categories.\n",
+              "type": "string",
+              "enum": [
+                "ASSOCIATION",
+                "BUSINESS",
+                "CONVENTION",
+                "CONSORTIUM",
+                "CORPORATE",
+                "CREDENTIAL",
+                "GENERAL",
+                "GOVERNMENT",
+                "INCLUSIVE",
+                "INDUSTRY",
+                "LEISURE - PACKAGE",
+                "STANDARD"
+              ]
+            },
+            "code": {
+              "description": "Car rental company's code for the rate.",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-6}"
+            },
+            "description": {
+              "description": "Rate code description.",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-70}"
+            }
+          }
+        },
+        "mileageLimitation": {
+          "type": "object",
+          "title": "Product_Car_Conditions_MileageLimitation",
+          "properties": {
+            "distance": {
+              "type": "integer"
+            },
+            "unit": {
+              "type": "string",
+              "enum": [
+                "KM",
+                "ML"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "Product_Car_LocationCode": {
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "description": "Train Station code, can be UIC code (with type=UIC or other value) or closest IATA code (with no type)",
+          "type": "string",
+          "pattern": "[0-9a-zA-Z]{3-7}"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "[0-9a-zA-Z]{1-4}"
+        }
+      }
+    },
+    "Product_Car_Delivery": {
+      "description": "used to convey delivery information",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "contact": {
+          "$ref": "#/definitions/Product_Car_Contact"
+        }
+      }
+    },
+    "Product_Car_Vehicle": {
+      "description": "information on the vehicle booked",
+      "properties": {
+        "code": {
+          "description": "The ACRISS Code defining the vehicle",
+          "type": "string",
+          "pattern": "[a-zA-Z0-9]{4}"
+        },
+        "description": {
+          "description": "Description of the vehicle booked",
+          "type": "string",
+          "pattern": "[a-zA-Z]{1-70}"
+        },
+        "options": {
+          "description": "Used to convey information about special equipments (GPS, Baby seat, ...) associated to the car booking.",
+          "type": "array",
+          "maxItems": 99,
+          "items": {
+            "type": "object",
+            "title": "Product_Car_Vehicle_Option",
+            "properties": {
+              "code": {
+                "description": "Equipment code",
+                "type": "string",
+                "pattern": "[a-zA-Z0-9]{4}"
+              },
+              "description": {
+                "description": "Equipment description",
+                "type": "string",
+                "pattern": "[a-zA-Z]{1-70}"
+              }
+            }
+          }
+        },
+        "numberOfDoors": {
+          "type": "integer"
+        }
+      }
+    },
+    "Product_Car_Contact": {
+      "properties": {
+        "phone": {
+          "description": "pick-up location phone information",
+          "type": "string",
+          "pattern": "[a-zA-Z0-9]{1-20}"
+        }
+      }
+    },
+    "Product_Car_Payment": {
+      "description": "used to convey payment information (including details of voucher indicating prepayment)",
+      "properties": {
+        "voucher": {
+          "type": "object",
+          "title": "Product_Car_Payment_Voucher",
+          "description": "Details of voucher information indicating prepayment.",
+          "properties": {
+            "type": {
+              "description": "Indicates what part of the amount the Voucher covers. (e.g. Full credit, partial credit)",
+              "type": "string",
+              "pattern": "[a-zA-Z]{1-70}"
+            },
+            "amount": {
+              "description": "Indicates the amount covered in case of partial credit voucher.",
+              "type": "integer"
+            },
+            "currency": {
+              "description": "Indicates the currency in case of partial credit voucher.",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-3}"
+            },
+            "decimalPlace": {
+              "description": "Indicates the decimal place in case of partial credit voucher.",
+              "type": "integer"
+            },
+            "billingNumber": {
+              "description": "Reference number of the Billing Account that will be charged for the payment.",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-25}"
+            },
+            "providerReference": {
+              "description": "Unique Identifier created by the Car rental provider to identify this voucher.",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-20}"
+            }
+          }
+        }
+      }
+    },
+    "Product_Train": {
+      "description": "train reservation",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Product_common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "description": {
+              "description": "Description or Free text",
+              "type": "string",
+              "maxLength": 199
+            },
+            "bkgClass": {
+              "description": "Booking class",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-2}"
+            },
+            "status": {
+              "description": "Status code (example HK, HX, HN, HL, TT ...)",
+              "type": "string"
+            },
+            "NIP": {
+              "description": "Number in party",
+              "type": "integer"
+            },
+            "confirmNbr": {
+              "description": "Confirmation number",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-20}"
+            },
+            "cancelNbr": {
+              "description": "Cancellation number",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-20}"
+            },
+            "overrideStatus": {
+              "description": "Enable to override status code (ex. for Offers)",
+              "type": "string",
+              "readOnly": true,
+              "pattern": "[a-zA-Z0-9]{1-2}"
+            },
+            "MBOProductCode": {
+              "description": "Freetext. Sub-product of the MBO (Ex. For EC AIR > international, domestic, european)",
+              "type": "string",
+              "pattern": "[a-zA-Z]{1-20}"
+            },
+            "serviceProvider": {
+              "title": "Product_Train_ServiceProvider",
+              "description": "rail provider information",
+              "properties": {
+                "ref": {
+                  "description": "The provider's profile reference.",
+                  "type": "string",
+                  "pattern": "[0-9a-zA-Z]{1-6}"
+                },
+                "name": {
+                  "description": "Provider name.",
+                  "type": "string",
+                  "maxLength": 70
+                },
+                "code": {
+                  "description": "Provider code.",
+                  "type": "string",
+                  "pattern": "[0-9a-zA-Z]{1-35}"
+                },
+                "externalRef": {
+                  "description": "External profile reference for imported profiles.",
+                  "type": "string",
+                  "pattern": "[0-9a-zA-Z]{1-10}"
+                }
+              }
+            },
+            "identifier": {
+              "description": "Train number",
+              "type": "string",
+              "pattern": "[a-zA-Z0-9]{1-6}"
+            },
+            "start": {
+              "title": "Product_Train_Start",
+              "description": "used to convey the pick-up information (pick-up date, time, location, ...) of the car booking",
+              "properties": {
+                "dateTime": {
+                  "description": "Departure date (Service date) with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "location": {
+                  "$ref": "#/definitions/Product_Train_Location"
+                },
+                "platform": {
+                  "description": "Reference of the departure platform",
+                  "type": "string",
+                  "maxLength": 20
+                }
+              }
+            },
+            "end": {
+              "title": "Product_Train_End",
+              "description": "used to convey the pick-up information (pick-up date, time, location, ...) of the car booking",
+              "properties": {
+                "dateTime": {
+                  "description": "Arrival date with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "location": {
+                  "$ref": "#/definitions/Product_Train_Location"
+                },
+                "platform": {
+                  "description": "Reference of the arrival platform",
+                  "type": "string",
+                  "maxLength": 20
+                }
+              }
+            },
+            "duration": {
+              "type": "string",
+              "readOnly": true
+            },
+            "vehicle": {
+              "title": "Product_Train_Vehicle",
+              "properties": {
+                "code": {
+                  "description": "Equipment code",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{1-3}"
+                },
+                "description": {
+                  "description": "Equipment description",
+                  "type": "string",
+                  "maxLength": 70
+                }
+              }
+            },
+            "mileage": {
+              "title": "Product_Train_Mileage",
+              "properties": {
+                "distance": {
+                  "description": "Distance of the trip",
+                  "type": "integer",
+                  "maxLength": 8
+                },
+                "unit": {
+                  "description": "Unit of distance, in kilometers (KM) or miles (MI)",
+                  "type": "string",
+                  "enum": [
+                    "KM",
+                    "MI"
+                  ]
+                }
+              }
+            },
+            "collectionReference": {
+              "title": "Product_Train_CollectionReference",
+              "properties": {
+                "number": {
+                  "description": "collection reference number",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{1-70}"
+                }
+              }
+            },
+            "ticket": {
+              "title": "Product_Train_Ticket",
+              "properties": {
+                "number": {
+                  "description": "Ticket number",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{1-20}"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Product_Train_Location": {
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "description": "Train Station code, can be UIC code (with type=UIC or other value) or closest IATA code (with no type)",
+          "type": "string",
+          "pattern": "[0-9a-zA-Z]{3-7}"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "[0-9a-zA-Z]{1-4}"
+        },
+        "name": {
+          "description": "Name of the departure point",
+          "type": "string",
+          "maxLength": 60
+        }
+      }
+    },
+    "Product_MoveMisc": {
+      "description": "moveMiscellaneous Reservation is used to convey information about transportation services from the passenger's home to the airport for example, or from the hotel to the train station  \n",
+      "required": [
+        "name"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/Product_common"
+        },
+        {
+          "properties": {
+            "description": {
+              "description": "Description or Free text",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 199
+            },
+            "name": {
+              "description": "Move miscellaneous title",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 99
+            },
+            "status": {
+              "description": "Status code (example HK, HX, HN, HL, TT ...)",
+              "type": "string"
+            },
+            "NIP": {
+              "description": "Number in party",
+              "type": "integer",
+              "pattern": "[0-9]{1-99}"
+            },
+            "confirmNbr": {
+              "description": "Confirmation number",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "cancelNbr": {
+              "description": "Cancellation number",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "overrideStatus": {
+              "description": "Enable to override status code (ex. for Offers)",
+              "type": "string",
+              "readOnly": true,
+              "pattern": "[a-zA-Z0-9]{1-2}"
+            },
+            "MBOProductCode": {
+              "description": "Freetext on twenty characters, sub-product of the MBO (Ex. For EC AIR > international, domestic, european)",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "serviceProvider": {
+              "title": "Product_MoveMisc_ServiceProvider",
+              "description": "marketing service provider information",
+              "properties": {
+                "ref": {
+                  "description": "The provider's profile reference.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 6
+                },
+                "name": {
+                  "description": "Provider name.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 70
+                },
+                "code": {
+                  "description": "Provider code.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 35
+                },
+                "externalRef": {
+                  "description": "External profile reference for imported profiles.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 10
+                }
+              }
+            },
+            "start": {
+              "title": "Product_MoveMisc_Start",
+              "required": [
+                "dateTime"
+              ],
+              "properties": {
+                "dateTime": {
+                  "description": "Departure date (Service date) with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "terminal": {
+                  "description": "Departure terminal",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 25
+                },
+                "locationCode": {
+                  "description": "[IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx) of the departure location",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{3}"
+                },
+                "address": {
+                  "$ref": "#/definitions/Address"
+                },
+                "media": {
+                  "$ref": "#/definitions/Relationship"
+                }
+              }
+            },
+            "end": {
+              "title": "Product_MoveMisc_End",
+              "description": "end point details",
+              "properties": {
+                "dateTime": {
+                  "description": "Arrival date with optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "terminal": {
+                  "description": "Arrival terminal",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 25
+                },
+                "locationCode": {
+                  "description": "[IATA table codes](http://www.iata.org/publications/Pages/code-search.aspx) of the arrival location",
+                  "type": "string",
+                  "pattern": "[a-zA-Z0-9]{3}"
+                },
+                "address": {
+                  "$ref": "#/definitions/Address"
+                },
+                "media": {
+                  "$ref": "#/definitions/Relationship"
+                }
+              }
+            },
+            "vehicle": {
+              "title": "Product_MoveMisc_Vehicle",
+              "description": "vehicle details",
+              "properties": {
+                "code": {
+                  "description": "Vehicle code",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 3
+                },
+                "description": {
+                  "description": "Vehicle description",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 70
+                }
+              }
+            },
+            "mileage": {
+              "title": "Product_MoveMisc_Mileage",
+              "description": "distance of the trip",
+              "properties": {
+                "distance": {
+                  "description": "Distance of the trip",
+                  "type": "integer",
+                  "pattern": "[0-9]{1-8}"
+                },
+                "unit": {
+                  "description": "Unit of distance, in kilometers (KM) or miles (MI)",
+                  "type": "string",
+                  "enum": [
+                    "KM",
+                    "MI"
+                  ]
+                }
+              }
+            },
+            "baggage": {
+              "title": "Product_MoveMisc_Baggage",
+              "properties": {
+                "quantity": {
+                  "description": "baggage allowance",
+                  "type": "integer",
+                  "pattern": "[0-9]{1-99}"
+                }
+              }
+            },
+            "checkInEndTime": {
+              "description": "Check-in deadline time. Only time stored for now.",
+              "type": "string",
+              "format": "date-time"
+            },
+            "ticket": {
+              "title": "Product_MoveMisc_Ticket",
+              "properties": {
+                "number": {
+                  "description": "Ticket number",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 35
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "BookingChannelType": {
+      "description": "information of the booking channel",
+      "properties": {
+        "code": {
+          "description": "Refer to the OTA Booking Channel Type (BCT) codeset list.",
+          "type": "string",
+          "enum": [
+            "EMA",
+            "FAX",
+            "N1A",
+            "OTH",
+            "PHO",
+            "WEB",
+            "B2B"
+          ]
+        },
+        "description": {
+          "description": "Booking channel description.",
+          "type": "string",
+          "pattern": "[a-zA-Z0-9]{1-35}"
+        }
+      }
+    },
+    "OriginSystemType": {
+      "description": "information of the originator system",
+      "properties": {
+        "type": {
+          "description": "Type of the origin system. TripConcierge Manual, Amadeus Integrated Partner, AeTM Web, AeTM Mobile, ePower, eRetail, Sell Classic, Sell Connect, Cros-Sell Notifier, TOMA, IRIS, Other",
+          "type": "string",
+          "enum": [
+            "TRIPCONCIERGE MANUAL",
+            "AMADEUS INTEGRATED PARTNER",
+            "AETM WEB",
+            "AETM MOBILE",
+            "EPOWER",
+            "ERETAIL",
+            "SELL CLASSIC",
+            "SELL CONNECT",
+            "CROSS-SELL NOTIFIER",
+            "TOMA",
+            "IRIS",
+            "B2W",
+            "OTHER"
+          ]
+        },
+        "description": {
+          "description": "Description of the origin system (notably in case of Other)",
+          "type": "string",
+          "pattern": "[a-zA-Z0-9]{1-99}"
+        }
+      }
+    },
+    "ExternalSystemType": {
+      "description": "information of external system involved",
+      "properties": {
+        "creation": {
+          "title": "ExternalSystemType_Creation",
+          "properties": {
+            "dateTime": {
+              "description": "Booking date in the external system with optional time and time offset",
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "bkgReferences": {
+          "description": "The reference of the booking",
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "title": "ExternalSystemType_BkgReferences",
+            "properties": {
+              "owner": {
+                "description": "Owner of the booking",
+                "type": "string",
+                "pattern": "[a-zA-Z0-9]{1-10}"
+              },
+              "number": {
+                "description": "Reference number of the booking",
+                "type": "string",
+                "pattern": "[a-zA-Z0-9]{1-19}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Address": {
+      "type": "object",
+      "description": "address information",
+      "properties": {
+        "category": {
+          "description": "Category of the contact element",
+          "type": "string",
+          "enum": [
+            "BUSINESS",
+            "PERSONAL",
+            "OTHER"
+          ]
+        },
+        "lines": {
+          "type": "array",
+          "description": "Line 1 = Street address, Line 2 = Apartment, suite, unit, building, floor, etc",
+          "items": {
+            "type": "string"
+          }
+        },
+        "postalCode": {
+          "type": "string",
+          "description": "Example: 74130"
+        },
+        "countryCode": {
+          "type": "string",
+          "description": "country code [ISO 3166-1 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)",
+          "pattern": "[a-zA-Z]{2}"
+        },
+        "cityName": {
+          "type": "string",
+          "description": "Full city name. Example: Dublin",
+          "pattern": "[a-zA-Z -]{1,35}"
+        },
+        "stateCode": {
+          "type": "string",
+          "description": "State code - two character standard [ISO 3166-2 state code](https://en.wikipedia.org/wiki/ISO_3166-2)",
+          "pattern": "[a-zA-Z0-9]{1,2}"
+        },
+        "stateName": {
+          "type": "string",
+          "description": "Full state name"
+        },
+        "postalBox": {
+          "type": "string",
+          "description": "E.g. BP 220"
+        },
+        "text": {
+          "type": "string",
+          "description": "Field containing a full unformatted address. Only applicable when the fields lines, postalCode, countryCode, cityName are not filled."
+        }
+      }
+    },
+    "Email": {
+      "type": "object",
+      "description": "email information",
+      "properties": {
+        "category": {
+          "description": "Category of the contact element",
+          "type": "string",
+          "enum": [
+            "BUSINESS",
+            "PERSONAL",
+            "OTHER"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "description": "Email address (e.g. john@smith.com)"
+        }
+      }
+    },
+    "Phone": {
+      "type": "object",
+      "description": "phone information",
+      "properties": {
+        "category": {
+          "description": "Category of the contact element",
+          "type": "string",
+          "enum": [
+            "BUSINESS",
+            "PERSONAL",
+            "OTHER"
+          ]
+        },
+        "addresseeName": {
+          "type": "string",
+          "description": "Adressee name (e.g. in case of emergency purpose it corresponds to name of the person to be contacted).",
+          "pattern": "[a-zA-Z -]"
+        },
+        "deviceType": {
+          "$ref": "#/definitions/PhoneDeviceType"
+        },
+        "countryCode": {
+          "type": "string",
+          "description": "Country code of the country (ISO3166-1). E.g. \"US\" for the United States",
+          "pattern": "[A-Z]{2}"
+        },
+        "countryCallingCode": {
+          "type": "string",
+          "description": "Country calling code of the phone number, as defined by the International Communication Union. Examples - \"1\" for US, \"371\" for Latvia.",
+          "pattern": "[0-9+]{2,5}"
+        },
+        "areaCode": {
+          "type": "string",
+          "description": "Corresponds to a regional code or a city code. The length of the field varies depending on the area.",
+          "pattern": "[0-9]{1,4}"
+        },
+        "number": {
+          "type": "string",
+          "description": "Phone number. Composed of digits only. The number of digits depends on the country.",
+          "pattern": "[0-9]{1,15}"
+        },
+        "extension": {
+          "type": "string",
+          "description": "Extension of the phone"
+        },
+        "text": {
+          "type": "string",
+          "description": "String containing the full phone number - applicable only when a structured phone (i.e. countryCallingCode + number) is not provided"
+        }
+      }
+    },
+    "PhoneDeviceType": {
+      "type": "string",
+      "description": "Type of the device (Landline, Mobile or Fax)",
+      "enum": [
+        "MOBILE",
+        "LANDLINE",
+        "FAX"
+      ]
+    },
+    "Description": {
+      "maxProperties": 1,
+      "properties": {
+        "texts": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "title": "Description_Text",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string"
+              },
+              "type": {
+                "description": "text type i.e. html, shortDescription",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "medias": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "title": "Description_Media",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "description": "media type",
+                "type": "string"
+              },
+              "encoding": {
+                "type": "string",
+                "enum": [
+                  "TXT",
+                  "DOC",
+                  "GIF",
+                  "PNG",
+                  "PDF",
+                  "JPG",
+                  "JPEG"
+                ]
+              },
+              "size": {
+                "type": "integer"
+              },
+              "src": {
+                "type": "string"
+              },
+              "ID": {
+                "type": "string",
+                "pattern": "[0-9a-z-A-Z]{1-10}"
+              },
+              "width": {
+                "type": "integer"
+              },
+              "height": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "TravelAgency": {
+      "description": "details on the travel agency owning the trip",
+      "properties": {
+        "officeName": {
+          "description": "Office name of the travel agency",
+          "type": "string",
+          "readOnly": true
+        },
+        "phone": {
+          "description": "Phone number of the travel agency",
+          "$ref": "#/definitions/Phone"
+        },
+        "email": {
+          "description": "Email of the travel agency",
+          "$ref": "#/definitions/Email"
+        },
+        "address": {
+          "description": "adress of the travel agency",
+          "$ref": "#/definitions/Address"
+        }
+      }
+    },
+    "TripPoint": {
+      "type": "object",
+      "title": "TripPoint",
+      "description": "trip point information",
+      "properties": {
+        "dateTime": {
+          "description": "Date of the trip point optional time and time offset in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format, e.g. 2017-02-10T20:40:00+02:00",
+          "type": "string",
+          "format": "date-time"
+        },
+        "locationName": {
+          "description": "Name of the point city",
+          "type": "string",
+          "maxLength": 64
+        },
+        "locationCode": {
+          "description": "Point Trip Location [IATA code](https://en.wikipedia.org/wiki/International_Air_Transport_Association_airport_code)",
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "address": {
+          "$ref": "#/definitions/Address"
+        }
+      }
+    }
+  },
+  "x-generatedAt": "2019-08-01T14:14:03.197Z"
+}
