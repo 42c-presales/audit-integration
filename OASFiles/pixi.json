@@ -59,13 +59,7 @@
           {
             "in": "formData",
             "name": "user",
-            "type": "string",
-            "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
-            "minLength": 10,
-            "maxLength": 50,
-            "required": true,
-            "format": "email",
-            "x-42c-sample": "userscanlogin@acme.com"
+            "type": "string"
           },
           {
             "in": "formData",
