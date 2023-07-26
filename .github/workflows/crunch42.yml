@@ -59,3 +59,4 @@ jobs:
           upload-to-code-scanning: true
           # Github token for uploading the results
           github-token: ${{ github.token }}
+          sarif-report: report.sarif
