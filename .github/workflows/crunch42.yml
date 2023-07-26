@@ -59,4 +59,12 @@ jobs:
           upload-to-code-scanning: true
           # Github token for uploading the results
           github-token: ${{ github.token }}
-          sarif-report: report.sarif
+          sarif-report: sarif-audit-report-${{ github.run_id }}
+          json-report: audit-action-report-${{ github.run_id }}
+      - name: save-sarif-report
+        if: always()        
+        uses: actions/upload-artifact@v3
+        with:
+          name: sarif-audit-report-${{ github.run_id }}
+          path: sarif-audit-report-${{ github.run_id }}.json
+          if-no-files-found: error
