@@ -66,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sarif-audit-report-${{ github.run_id }}
-          path: sarif-audit-report-${{ github.run_id }}.json
+          path: sarif-audit-report-${{ github.run_id }}.sarif
           if-no-files-found: error
